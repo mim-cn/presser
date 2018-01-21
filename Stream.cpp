@@ -1,7 +1,5 @@
 #include "Stream.h"
 
-namespace mimer{
-
 Stream::Stream(FILE* fp)
 {
     _fp = fp;
@@ -143,6 +141,4 @@ int	Stream::Scanf(const char *format, void* output)
 {
     if (!_fp) return EOF;
     return fscanf(_fp, format, output);
-}
-
 }

@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-namespace mimer {
-
 class Stream
 {
 public:
@@ -72,5 +70,5 @@ public:
         return out;
     }
 };
-}
+
 #endif // Stream.h
