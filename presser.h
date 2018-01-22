@@ -18,9 +18,11 @@ public:
     ~presser();
 public:
     bool encode(const char* indata = NULL, size_t size = 0);
-    bool decode(const char * indata, size_t size);
+    bool decode(const char* indata = NULL, size_t size = 0);
+    bool encode(char* outdata, size_t* osize, const char* indata = NULL, size_t size = 0);
+    bool decode(char* outdata, size_t* osize, const char* indata = NULL, size_t size = 0);
 private:
-    inline int A(char* buffer, byte* left_char, byte* left_size, byte cur_char, byte cur_size);
+    inline int A(char* buffer, byte cur_char, byte cur_size);
     inline int D(char* buffer, byte cur_char, byte next_char, byte third_char, size_t* cur_off);
     inline int I(byte ch) {
         int size = 1;
@@ -30,8 +32,8 @@ private:
         return size;
     }
     inline void _flush() { if (_data) { free(_data); _data = NULL; _size = 0; } }
-    bool _encode();
-    bool _decode();
+    bool _encode(char* outdata = NULL, size_t* osize = 0);
+    bool _decode(char* outdata = NULL, size_t* osize = 0);
 private:
     char*    _data = NULL;
     size_t   _size = 0;

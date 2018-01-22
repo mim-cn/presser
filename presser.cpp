@@ -37,34 +37,47 @@ bool presser::encode(const char * indata, size_t size)
     return _encode();
 }
 
-int presser::A(char* buffer, byte* left_char, byte* left_size, byte cur_char, byte cur_size)
+bool presser::encode(char* outdata, size_t* osize, const char * indata, size_t size)
 {
-    // (*left_size <= cur_size) ? tmp_char >> (cur_size - *left_size) : tmp_char << (*left_size - cur_size);
-    if (*left_size + cur_size >= 8) {
+    if (NULL == indata || size <= 0) {
+        return false;
+    }
+    else {
+        _size = size;
+        _data = (char*)malloc(_size);
+        memcpy(_data, indata, _size);
+    }
+    return _encode(outdata, osize);
+}
+
+int presser::A(char* buffer, byte cur_char, byte cur_size)
+{
+    // (_left_size <= cur_size) ? tmp_char >> (cur_size - _left_size) : tmp_char << (_left_size - cur_size);
+    if (_left_size + cur_size >= 8) {
         unsigned char tmp_char = cur_char;
-        *left_size = (cur_size - (8 - (*left_size)));
-        tmp_char >>= (*left_size);
-        *buffer = (*left_char) | tmp_char;
-        *left_char = cur_char & ((1 << (*left_size)) - 1);
+        _left_size = (cur_size - (8 - _left_size));
+        tmp_char >>= _left_size;
+        *buffer = _left_char | tmp_char;
+        _left_char = cur_char & ((1 << _left_size) - 1);
         /*
-        if (*left_size == 0) {
-            tmp_char >>= (*left_size);
-            *left_size = 0;
-            *left_char = 0;
+        if (_left_size == 0) {
+            tmp_char >>= (_left_size);
+            _left_size = 0;
+            _left_char = 0;
             *buffer = tmp_char;
         }
         else {
-            *left_size = (cur_size - (8 - (*left_size)));           
-            tmp_char >>= (*left_size);
-            *buffer = (*left_char) | tmp_char;
-            *left_char = cur_char & ((1 << (*left_size)) - 1);
+            _left_size = (cur_size - (8 - (_left_size)));
+            tmp_char >>= (_left_size);
+            *buffer = (_left_char) | tmp_char;
+            _left_char = cur_char & ((1 << (_left_size)) - 1);
         }
         */
         return 1;
     }
     else {
-        *left_size = cur_size + (*left_size);
-        *left_char |= (cur_char << (8 - (*left_size)));
+        _left_size = cur_size + _left_size;
+        _left_char |= (cur_char << (8 - _left_size));
     }
     return 0;
 }
@@ -95,7 +108,7 @@ int presser::D(char* buffer, byte cur_char, byte next_char, byte third_char, siz
                 buffer[*cur_off] = _left_char + tmp_char;
                 (*cur_off)++;
             }
-            // 重新设置 _left_char _left_size
+           // 重新设置 _left_char _left_size
             _left_size = _left_size - cur_size;
             _left_char = cur_char << (8 - _left_size);
             return 1;
@@ -190,7 +203,19 @@ bool presser::decode(const char * indata, size_t size)
     return _decode();
 }
 
-bool presser::_encode()
+bool presser::decode(char* outdata, size_t* osize, const char * indata, size_t size)
+{
+    if (NULL == indata || size <= 0) {
+        return false;
+    }
+    else {
+        _size = size;
+        _data = (char*)malloc(_size);
+        memcpy(_data, indata, _size);
+    }
+    return _decode(outdata, osize);
+}
+bool presser::_encode(char* outdata, size_t* osize)
 {
     //for (int i = 0; i < 256; ++i) {
     //    printf("%3d  %3d\n",i, I(i));
@@ -211,34 +236,38 @@ bool presser::_encode()
         if (cur_char < 0) {
             // k
             cur_char = REVERSE - cur_char;
-            offset += A(&newbuf[offset], &_left_char, &_left_size, cur_char, 8);
+            offset += A(&newbuf[offset], cur_char, 8);
             // d
             cur_size = I(256 - pref) + 1;
             cur_char = (1 << cur_size) | pref;
-            offset += A(&newbuf[offset], &_left_char, &_left_size, cur_char, cur_size);
+            offset += A(&newbuf[offset], cur_char, cur_size);
         }
         else {
             // k
-            offset += A(&newbuf[offset], &_left_char, &_left_size, cur_char, 8);
+            offset += A(&newbuf[offset], cur_char, 8);
             // d
             cur_size = I(256 - pref) + 1;
             cur_char = pref;
-            offset += A(&newbuf[offset], &_left_char, &_left_size, cur_char, cur_size);
+            offset += A(&newbuf[offset], cur_char, cur_size);
         }
         i += 2;
     }
     if (_stream) {
         _stream->Write(newbuf, 1, offset);
     }
-    if (newbuf) {
+    if (!outdata && newbuf) {
         delete newbuf;
+    }
+    if(outdata){
+        outdata = newbuf;
+        *osize = offset;
     }
     return true;
 }
 
-bool presser::_decode()
+bool presser::_decode(char* outdata, size_t* osize)
 {
-    if (NULL == _data || _size <= 0 || _stream == NULL) return false;
+    if (NULL == _data || _size <= 0) return false;
     size_t i = 0;
     byte pref = 0, next = 0, third = 0;
     char*  newbuf = (char*)malloc(_size * 2);
@@ -253,8 +282,12 @@ bool presser::_decode()
     if (_stream) {
         _stream->Write(newbuf, 1, offset);
     }
-    if (newbuf) {
+    if (!outdata && newbuf) {
         delete newbuf;
+    }
+    if(outdata){
+        outdata = newbuf;
+        *osize = offset;
     }
     return true;
 }
